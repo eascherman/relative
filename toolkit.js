@@ -1,111 +1,178 @@
 
-re.on = (name, callback) => el => el.addEventListener(name, ev => callback(ev));
+re.on = function(name, callback) {
+    return function(el) {
+        return el.addEventListener(name, callback);
+    };
+};
+
 (function() {
     [   'click', 'dblclick', 'wheel',
         'keydown', 'keyup',
         'input', 'focus', 'blur', 
         'drag', 'dragstart', 'dragover', 'dragstop', 'drop', 
         'mousedown', 'mouseup', 'mouseenter', 'mouseleave', 'mousemove', 'mouseout'
-    ].forEach(eventName => re.on[eventName] = callback => re.on(eventName, callback));
+    ].forEach(function(eventName) {
+        re.on[eventName] = function(callback) {
+            return re.on(eventName, callback);
+        };
+    });
 
-    re.on.wheel.down = callback => re.on.wheel(function(ev) {
-        if (ev.wheelData < 0)
-            callback(ev);
-    });
-    re.on.wheel.up = callback => re.on.wheel(function(ev) {
-        if (ev.wheelData > 0)
-            callback(ev);
-    });
+    re.on.wheel.down = function wheelDown(callback) {
+        return re.on.wheel(function(ev) {
+            ev.preventDefault();
+            if (ev.wheelDelta < 0)
+                callback(ev);
+        });
+    };
+    re.on.wheel.up = function wheelUp(callback) { 
+        return re.on.wheel(function(ev) {
+            ev.preventDefault();
+            if (ev.wheelDelta > 0)
+                callback(ev);
+        });
+    };
 
     // keystroke sugar:
     //  re.on.keydown.g(ev => console.log('you pressed g!'));
     //  re.on.keydown.ctrl.s(functionThatSavesMyStuff)(document.body);
 
-    var chars = [];
+    var chars;
     var otherKeys;
     function loadKeyNames(evName) {
-        if (!chars)
+        if (!chars) {
+            chars = [];
             for (var i=0 ; i<230 ; i++) {
                 var char = String.fromCharCode(i);
                 if (char.length != "")
                     chars.push(char);
             }
+        }
         if (!otherKeys)
             otherKeys = {
                 shift:16, ctrl:17, alt:18,
                 backspace:8, tab:9, enter:13, pause:19, capsLock:20, escape:27,
                 pageUp:33, pageDown:34, end:35, home:36, left:37, up:38, right:39, down:40,
                 insert:45, delete:46, 
-                leftWindow:91, rightWindow:92, select:93, f1:112, f2:113, f3:114, f4:115, 
-                f5:116, f6:117, f7:118, f8:119, f9:120, f10:121, f11:122, f12:123, numLock:144,
-                scrollLock:145
+                leftWindow:91, rightWindow:92, select:93, 
+                f1:112, f2:113, f3:114, f4:115, f5:116, f6:117, f7:118, f8:119, f9:120, f10:121, f11:122, f12:123, 
+                numLock:144, scrollLock:145
             };
             
         var evSetup = re.on[evName];
 
         Object.keys(otherKeys).forEach(function(keyName) {
-            evSetup[keyName] = callback => evSetup(function(ev) {
-                if (otherKeys[keyName] === ev.which) {
-                    ev.preventDefault();
-                    callback(ev); 
-                }
-            });
+            evSetup[keyName] = function(callback) {
+                return evSetup(function(ev) {
+                    if (otherKeys[keyName] === ev.which) {
+                        ev.preventDefault();
+                        callback(ev); 
+                    }
+                });
+            };
         });
 
         chars.forEach(function(char) {
-            evSetup[char] = callback => evSetup(function(ev) {
-                if (String.fromCharCode(ev.which) === char) {
-                    ev.preventDefault();
-                    callback(ev); 
-                }
-            });
+            evSetup[char] = function(callback) { 
+                return evSetup(function(ev) {
+                    if (String.fromCharCode(ev.which).toLowerCase() === char) {
+                        ev.preventDefault();
+                        callback(ev); 
+                    }
+                });
+            };
 
-            evSetup.ctrl[char] = callback => evSetup(function(ev) {
-                if ((ev.ctrlKey || ev.metaKey) && String.fromCharCode(ev.which) === char) {
-                    ev.preventDefault();
-                    callback(ev); 
-                }
-            });
-            evSetup.shift[char] = callback => evSetup(function(ev) {
-                if (ev.shiftKey && String.fromCharCode(ev.which) === char) {
-                    ev.preventDefault();
-                    callback(ev); 
-                }
-            });
-            evSetup.alt[char] = callback => evSetup(function(ev) {
-                if (ev.altKey && String.fromCharCode(ev.which) === char) {
-                    ev.preventDefault();
-                    callback(ev); 
-                }
-            });
+            evSetup.ctrl[char] = function(callback) { 
+                return evSetup(function(ev) {
+                    if ((ev.ctrlKey || ev.metaKey) && String.fromCharCode(ev.which).toLowerCase() === char) {
+                        ev.preventDefault();
+                        callback(ev); 
+                    }
+                });
+            };
+            evSetup.shift[char] = function(callback) { 
+                return evSetup(function(ev) {
+                    if (ev.shiftKey && String.fromCharCode(ev.which).toLowerCase() === char) {
+                        ev.preventDefault();
+                        callback(ev); 
+                    }
+                });
+            };
+            evSetup.alt[char] = function(callback) { 
+                return evSetup(function(ev) {
+                    if (ev.altKey && String.fromCharCode(ev.which).toLowerCase() === char) {
+                        ev.preventDefault();
+                        callback(ev); 
+                    }
+                });
+            };
         });
     };
     
     // performs an action once when a property is first used via a getter and then removes function based property
     function setupProperty(obj, prop, loader) {
-        if (true)   //(!Object.defineProperty)   property method currently disabled
+        //if (!Object.defineProperty) 
             loader(prop);
-        else {
+        /*else {
             var holder = obj[prop];
             Object.defineProperty(obj, prop, {
                 get: function() {
                     loader(prop);
-
+                    var out = obj[prop];
                     Object.defineProperty(obj, prop, {
                         value: obj[prop],
                         enumerable: true
                     });
+                    return out;
                 }, 
                 enumerable: true,
                 configurable: true
             });
-        }
+        }*/
     }
     
     ['keydown', 'keyup'].forEach(function(evName) {
         setupProperty(re.on, evName, loadKeyNames);
     });
 
+
+})();
+
+
+(function() {
+    var hashRouter;
+
+    re.getHashRouter = function getHashRouter() {
+        if (!hashRouter) {
+            hashRouter = {};
+            var gsLoc = re(hashRouter, 'location', function() {
+                return window.location;
+            });
+
+            ['hash', 'search', 'pathname'].map(function(prop) {
+                return re(hashRouter, prop, function get() {
+                    return hashRouter.location[prop];
+                }, function set(value) {
+                    hashRouter.location[prop] = value;
+                });
+            });
+
+            var ops = window.onpopstate;
+            window.onpopstate = function(ev) {
+                re.invalidate(gsLoc);
+                if (ops)
+                    ops(ev);
+            };
+
+            var priorLoc;
+            setInterval(function() {
+                var loc = window.location.toString();
+                if (priorLoc !== loc) 
+                    re.invalidate(gsLoc);
+                priorLoc = loc;
+            }, 200);
+        }
+        return hashRouter;
+    };
 })();
 
 
@@ -114,12 +181,10 @@ function LinkedList(arr) {
     this.onRemoveCallbacks = [];
     re(this, 'first');
     re(this, 'last');
-    
-    var thiz = this;
     if (arr)
         arr.forEach(function(item) {
-            thiz.append(item)
-        });
+            this.append(item)
+        }, this);
 }
 LinkedList.prototype.prepend = function(value) {
     var lli = new LinkedListItem(value, this);
@@ -157,16 +222,18 @@ LinkedList.prototype.onInsert = function(callback) {
 }; 
 LinkedList.prototype.triggerOnInsert = function(lli) {
     var cbs = this.onInsertCallbacks;
-    //this.onInsertCallbacks = [];
-    cbs.forEach(cb => cb(lli));
+    cbs.forEach(function(cb) {
+        cb(lli)
+    });
 };
 LinkedList.prototype.onRemove = function(callback) {
     this.onRemoveCallbacks.push(callback);
 };
 LinkedList.prototype.triggerOnRemove = function(lli) {
     var cbs = this.onRemoveCallbacks;
-    //this.onRemoveCallbacks = [];
-    cbs.forEach(cb => cb(lli));
+    cbs.forEach(function(cb) {
+        cb(lli)
+    });
 }
 LinkedList.prototype.selfCheck = function() {
     if (!this.first != !this.last)
@@ -244,70 +311,136 @@ LinkedListItem.prototype.remove = function() {
     this.list.triggerOnRemove(this);
 };
 
-re.mapRender = function map(arrGetter, transform, remover) {
-    if (!remover)
-        remover = function(installation) {
-            installation.remove();
+
+(function() {
+
+    function eventTrigger(thiz) {
+        var counter = 1;
+        var out = function(callback) {
+            var id = counter++;
+            out.dependents[id] = callback;
+            out.remove = function() {
+                delete out.dependents[id];
+            };
+        };
+        out.trigger = function() {
+            var args = arguments;
+            Object.keys(out.dependents).forEach(function(key) {
+                var callback = out.dependents[key];
+                callback.apply(thiz, args);
+            });
+        };
+        out.dependents = {};
+
+        return out;
+    }
+
+    re.alertArray = function(arr) {
+        if (!arr.onRemove) {
+            arr.onRemove = eventTrigger(arr);
+            arr.onInsert = eventTrigger(arr);
+
+            var push = arr.push;
+            arr.push = function(val) {
+                var out = push.call(arr, val);
+                arr.onInsert.trigger(val, arr.length);
+                return out;
+            };
+
+            var pop = arr.pop;
+            arr.pop = function() {
+                var out = pop.apply(arr);
+                arr.onRemove.trigger(arr.length - 1);
+                return out;
+            };
+
+            var shift = arr.shift;
+            arr.shift = function() {
+                var out = shift.apply(arr);
+                arr.onRemove.trigger(0);
+                return out;
+            };
+
+            var unshift = arr.unshift;
+            arr.unshift = function(val) {
+                var out = unshift.call(arr, val);
+                arr.onRemove.trigger(val, 0);
+                return out;
+            };
+
+            var splice = arr.splice;
+            arr.splice = function(pos, deleteCount) {
+                var out = splice.apply(arr, arguments);
+                while (deleteCount > 0) {
+                    arr.onRemove.trigger(pos + deleteCount - 1);
+                    deleteCount--;
+                }
+                for (var i=2; i<arguments.length; i++) {
+                    var item = arguments[i];
+                    arr.onInsert.trigger(item, pos + i - 2);
+                }
+                return out;
+            };
+        }
+    };
+
+    re.bindMap = function(arr, transform) {
+        function posGetter(val) {
+            return function getPos() {
+                for (var i=0; i<arr.length; i++)
+                    if (val === arr[i])
+                        return i;
+            };
         };
 
-    var installations = [];
-    var result = [];
-    var priorArr = [];
+        var out = arr.map(function(item, pos) {
+            return transform(item, posGetter(item), arr);
+        });
 
-    return function(el, parentLocation) {
-        var arr = arrGetter();
-        re(arr).get();              // ensure changes to the array are triggered for this function
-        var i = 0;
-        var j = 0;
+        re.alertArray(arr);
+        arr.onRemove(function(pos) {
+            return out.splice(pos, 1);
+        });
+        arr.onInsert(function(item, pos) {
+            var tItem = transform(item, posGetter(item), arr);
+            return out.splice(pos, 0, tItem);
+        });
 
-        while (i < arr.length && j < priorArr.length) {     // todo: handle scenarios where more than one is removed/inserted at once
-            if (arr[i] === priorArr[j]) {       // match
-                i++, j++;
-            } else if (arr[i+1] === priorArr[j]) {        // one inserted
-                var val = arr[i];
-                var content = transform(val);
-
-                var followingInstallation = installations[j];
-                var elementAfter = followingInstallation.getFirstElement();
-                var installation;
-                if (followingInstallation)
-                    installation = followingInstallation.insertContent(content);
-                else
-                    installation = parentLocation.installChild(content, el);
-
-                installations.splice(j, 0, installation);
-                result.splice(j, 0, content);
-                i++;
-            } else if (arr[i] === priorArr[j+1]) {        // one removed
-                var inst = installations.splice(i, 1)[0];
-                remover(inst);
-                result.splice(i, 1);
-                j++;
-            } else {           // not sure what it is, remove it
-                var inst = installations.splice(i, 1)[0];
-                remover(inst);
-                result.splice(i, 1); 
-                j++;
-            }
-        }
-
-        if (j < priorArr.length) {      // get rid of final entries no longer present
-            while (j < result.length) {
-                var inst = installations.splice(i, 1)[0];
-                remover(inst);
-                result.splice(i, 1);
-            }
-        } else {                        // add new final entries 
-            while (i < arr.length) {
-                var content = transform(arr[i]);
-
-                var installation = parentLocation.installChild(content, el);
-                installations.push(installation);
-                result.push(content);
-                i++;
-            }
-        } 
-
-        priorArr = arr.concat([]);
+        return out;
     };
-};
+
+    re.arrInstall = function(arr) {
+        re.alertArray(arr);
+        var initialized = false;
+        var installations = [];
+
+        return function(el, loc) {
+            if (!initialized) {
+                arr.onRemove(function(pos) {
+                    var inst = installations[pos];
+                    inst.remove();
+                    installations.splice(pos, 1);
+                });
+                arr.onInsert(function(item, pos) {
+                    var instPos = installations[pos];
+                    var inst;
+                    if (instPos)
+                        inst = instPos.insertContent(item);
+                    else
+                        inst = loc.installChild(item, el);
+                    installations.splice(pos, 0, inst);
+                });
+
+                arr.forEach(function(item) {
+                    var inst = loc.installChild(item, el);
+                    installations.push(inst);
+                });
+            }
+        };
+    };
+
+    re.mapInstall = function(arr, transform) {
+        return re.arrInstall(re.bindMap(arr, transform));
+    };
+
+})();
